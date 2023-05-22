@@ -5,22 +5,22 @@ using Markdown
 using InteractiveUtils
 
 # ╔═╡ 787391aa-f89a-11ed-3b07-3f1ae3d5b1f6
-using Distributions, Plots, LinearAlgebra
+using Distributions, Plots, LinearAlgebra, LaTeXStrings, StatsBase
 
 # ╔═╡ 0e61f5f9-5f5a-474c-9369-df75a5e851c1
-α, β, ϵ = 2, 1/0.6, Normal(0, 0.2)
+α, β, ϵ = 2, 1/0.6, Normal(0, √0.2)
 
 # ╔═╡ 548c72ed-c809-4065-ad06-1b37fbb28794
 w0, w1 = -2:0.01:2, -2:0.01:2
 
 # ╔═╡ 6198baf9-0c88-4ef4-bcdc-53f278f719a1
-W = map(collect, collect(Iterators.product(w0, w1)))
+W = permutedims(map(collect, collect(Iterators.product(w0, w1))))
 
 # ╔═╡ 7737f637-aca9-4554-bf09-9adf28f1a935
 init_prior = map(x -> pdf(MvNormal(zeros(2), I / α), x), W)
 
 # ╔═╡ 57693af6-a716-421c-8714-0cf0398fe694
-contour(w0, w1, init_prior, fill=true)
+contour(w0, w1, init_prior, fill=true, fillcolor = :inferno, colorbar = false, ratio = :equal)
 
 # ╔═╡ b597f02b-2060-4977-a3c7-58774f684c90
 x⃗ = -1:0.01:1
@@ -33,16 +33,32 @@ t⃗ = x⃗_ext * [-1.5; 0.5] + rand(ϵ, size(x⃗))
 
 # ╔═╡ e8175d38-7d80-48fd-bf2d-f5ce2e3a7893
 let
-	plt = scatter(x⃗, t⃗)
-	plot!(plt, x⃗, x⃗_ext * [-1.5; 0.5])
+	plt = plot()
+	plot!(plt, x⃗, x⃗_ext * [-1.5; 0.5], label = L"Original line, $y = w_0 + w_1 x$")
+	scatter!(plt, x⃗, t⃗, label = L"Generated data with noise, $t = w_0 + w_1 x + \epsilon$")
 	plt
 end
 
 # ╔═╡ 72071f10-ea96-4e9b-9862-06e3814eba1c
 indices = sample(eachindex(x⃗), 7)
 
+# ╔═╡ 7955466f-1a9c-44e7-aaa8-1281d30520c3
+function plot_(data, title = "")
+	contour(
+		w0, w1, data,
+		fill = true,
+		xlabel = L"w_1",
+		ylabel = L"w_0",
+		colorbar = false,
+		fillcolor = :inferno,
+		size = (400, 400),
+		ratio = :equal,
+		title = title,
+	)
+end
+
 # ╔═╡ 8513e0e2-f65b-4a94-a67c-d6339c5274fd
-let
+posterior = let
 	prior = init_prior
 	likelyhoods = []
 	posteriors = []
@@ -55,27 +71,36 @@ let
 		push!(likelyhoods, l)
 		push!(posteriors, p)
 	end
-	plot(
-		map(
-			l -> contour(w0, w1, l, fill=true),
-			permutedims([likelyhoods posteriors]),
-		)...,
-		size = (800, 3000),
-		layout = (7, 2),
-		colorbar = false,
-	)
+	# for i in 1:7
+	# 	savefig(plot_(posteriors[i]), "posterior$i.png")
+	# 	savefig(plot_(likelyhoods[i]), "likelyhood$i.png")
+	# end
+	posteriors[end]
 end
+
+# ╔═╡ e5187fb9-4994-4f41-ab64-d77750c94454
+σ² = round(ϵ.σ^2, digits=3)
+
+# ╔═╡ d78cc987-c1bf-4d61-96cd-50372db5b549
+# savefig(plot_(posterior, "σ² = $σ²"), "sigma-$σ².png")
+
+# ╔═╡ 934907ba-ac7b-4e1d-a1ed-940c2dce1eba
+plot_(posterior)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 
 [compat]
 Distributions = "~0.25.93"
+LaTeXStrings = "~1.3.0"
 Plots = "~1.38.12"
+StatsBase = "~0.33.21"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -84,7 +109,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.8.5"
 manifest_format = "2.0"
-project_hash = "e7677e5ae7c113c95d46f70fdde3daee985b0ec1"
+project_hash = "26faa866e4fe4c23185ec28539a4fe35deab7b59"
 
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
@@ -1087,6 +1112,10 @@ version = "1.4.1+0"
 # ╠═c6d94dbf-0170-41ce-8919-aa43169d6a53
 # ╠═e8175d38-7d80-48fd-bf2d-f5ce2e3a7893
 # ╠═72071f10-ea96-4e9b-9862-06e3814eba1c
+# ╠═7955466f-1a9c-44e7-aaa8-1281d30520c3
 # ╠═8513e0e2-f65b-4a94-a67c-d6339c5274fd
+# ╠═e5187fb9-4994-4f41-ab64-d77750c94454
+# ╠═d78cc987-c1bf-4d61-96cd-50372db5b549
+# ╠═934907ba-ac7b-4e1d-a1ed-940c2dce1eba
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
